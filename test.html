@@ -1,0 +1,65 @@
+<html>
+  <head>
+    <title>Testing Grape API with Goliath and d3</title>
+    <script src="http://mbostock.github.com/d3/d3.v2.js"></script>
+    <style type='text/css'>
+      .pod {
+        width: 100px;
+        height: 50px;
+      }
+      path {
+        stroke: steelblue;
+        stroke-width: 1;
+        fill:none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id='selections' class='pod'></div>
+    <div id='sparkline' class='pod'></div>
+
+    <script type='text/javascript'>
+      function current(dom_id, values) {
+        var h2 = d3.select(dom_id).selectAll('h2')
+          .data([values[values.length - 1]], function(d) {
+            return d;
+          });
+         h2.text(function(d) {
+           return "Got " + d +" again";
+         });
+         h2.enter().append('h2').text(function(d) {
+            return d;
+          });
+          h2.exit().remove();
+      }
+
+      function sparkline(dom_id, values) {
+        var line, x, y, width, height,
+            graph = d3.select(dom_id).append('svg:svg');
+
+        // grab the svg and figure out the width/height for it
+        width  = graph.node().offsetWidth;
+        height = graph.node().offsetHeight;
+
+        //set up the scales
+        x = d3.scale.linear().domain([0, values.length]).range([0, width]);
+        y = d3.scale.linear().domain(d3.extent(values)).range([height, 0]);
+
+        line = d3.svg.line().x(function(d, i) {
+          return x(i);
+        }).y(function(d) {
+          return y(d);
+        });
+
+        graph.append('svg:path').attr('d', line(values));
+      }
+
+      d3.json("http://33.33.33.33:9000/v1/data/bitcoin", function(datum) {
+        current('#sparkline', datum);
+        current('#sparkline', [30]);
+        current('#sparkline', [30]);
+        sparkline('#sparkline', datum);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Testing Grape API with Goliath and d3</title>
+    <script src="http://d3js.org/d3.v2.js"></script>
+    <style type='text/css'>
+      .pod {
+        width: 150px;
+        height: 150px;
+        border: 1px solid;
+        text-align: center;
+        float: left;
+        margin: 10px;
+      }
+
+      path {
+        stroke: steelblue;
+        stroke-width: 1;
+        fill: none;
+      }
+
+      .pod svg {
+        width: 100px;
+        height:10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id='bitcoin' class='pod'></div>
+    <div id='tea' class='pod'></div>
+    <div id='stocks' class='pod'></div>
+    <script type='text/javascript'>
+      var dashboardPod = function() {
+        // set up attributes we want accessible to the world
+        var attributes = {
+          x: d3.scale.linear(),
+          y: d3.scale.linear(),
+          xDomain: null,
+          yDomain: null,
+          xRange: null,
+          yRange: null
+        }, identity = function(d) { return d; };
+
+        var pod = function(selection) {
+          selection.each(function(data, index) {
+            // more descriptive name for what this is
+            var element   = this,
+                container = d3.select(this),
+                header, sparkline, graph, path;
+
+            // header is a h2 with only the last value being shown
+            header = container.selectAll('h2').
+              data([data[data.length - 1]], identity).
+              enter().append('h2').
+              text(function(d) { return d; });
+
+            // put the data on the svg element
+            sparkline = container.selectAll('svg').
+              data([data], identity);
+
+            // if this is new data, go ahead and create the svg and a path for
+            // everything
+            sparkline.enter().append('svg:svg').append('svg:g').append('svg:path');
+
+            // set up the scales, with defaults
+            attributes.x.domain(attributes.xDomain || [0, data.length]).
+              range(attributes.xRange || [0, sparkline.node().offsetWidth]).clamp(true);
+            attributes.y.domain(attributes.yDomain || d3.extent(data)).
+              range(attributes.yRange || [sparkline.node().offsetHeight, 0]).clamp(true);
+            console.log(data, index, this, attributes.y.domain(), attributes.y.range());
+
+            window.x = attributes.x;
+            window.y = attributes.y;
+            sparkline.select('path').transition().attr('d', d3.svg.line().x(function(d,i) {
+              return attributes.x(i);
+            }).y(function(d) {
+              return attributes.y(d);
+            }));
+          });
+        };
+
+        for (var key in attributes) {
+          if (attributes.hasOwnProperty(key)) {
+            pod[key] = function(newAttributeValue) {
+              if (!arguments.length) return attributes[key];
+              attributes[key] = newAttributeValue;
+              return pod;
+            }
+          }
+        }
+
+        return pod;
+      };
+
+      var endPoints = ['bitcoin', 'teaInChina', 'stocks'], pods = [];
+      var dashboard = dashboardPod();
+
+        endPoints.forEach(function(endPoint) {
+          d3.json('http://33.33.33.33:9000/v1/data/'+endPoint, function(datum) {
+            pods.push(datum);
+            d3.selectAll('.pod').data(pods).call(dashboardPod());
+          });
+        });
+    </script>
+  </body>
+</html>
